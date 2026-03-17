@@ -1,5 +1,7 @@
 #!/bin/bash
-cd "$(dirname "$0")"
+
+# Resolve to repo root (one level up from commands/)
+cd "$(dirname "$0")/.."
 
 REPO_DIR="$(pwd)"
 PID_FILE=".clui.pid"

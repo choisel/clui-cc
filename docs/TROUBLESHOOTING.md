@@ -136,6 +136,60 @@ To allow it:
 
 You only need to do this once. This is a local build, not App Store distribution.
 
+## Install Fails at Whisper Step
+
+The installer requires Whisper for voice input. If it fails:
+
+1. Make sure Homebrew is installed:
+
+```bash
+brew --version
+```
+
+If not, install it:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+2. Install Whisper manually:
+
+```bash
+brew install whisper-cli
+```
+
+3. Rerun the installer:
+
+```bash
+./install-app.command
+```
+
+## Install Fails at Build Step
+
+Run the steps manually to see the detailed error:
+
+```bash
+./commands/setup.command
+```
+
+```bash
+npm run dist
+```
+
+If `npm run dist` fails, try a clean reinstall:
+
+```bash
+rm -rf node_modules
+```
+
+```bash
+npm install
+```
+
+```bash
+npm run dist
+```
+
 ## Marketplace Shows "Failed to Load"
 
 Expected when offline. Marketplace needs internet access; core app features continue to work.

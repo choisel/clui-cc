@@ -15,38 +15,29 @@ A lightweight, transparent desktop overlay for [Claude Code](https://docs.anthro
 - **Permission approval UI** — intercepts tool calls via PreToolUse HTTP hooks so you can review and approve/deny from the UI.
 - **Conversation history** — browse and resume past Claude Code sessions.
 - **Skills marketplace** — install plugins from Anthropic's GitHub repos without leaving Clui CC.
-- **Voice input** — local speech-to-text via Whisper (no cloud transcription).
+- **Voice input** — local speech-to-text via Whisper (required, installed automatically).
 - **File & screenshot attachments** — paste images or attach files directly.
 - **Dual theme** — dark/light mode with system-follow option.
 
-## Why Clui CC Is Different
+## Why Clui CC
 
 - **Claude Code, but visual** — keep CLI power while getting a fast desktop UX for approvals, history, and multitasking.
-- **Human-in-the-loop safety** — tool calls can be reviewed/approved in-app before execution.
+- **Human-in-the-loop safety** — tool calls are reviewed and approved in-app before execution.
 - **Session-native workflow** — each tab runs an independent Claude session you can resume later.
-- **Mostly local-first** — core behavior runs through your local Claude CLI, with minimal network dependency.
+- **Local-first** — everything runs through your local Claude CLI. No telemetry, no cloud dependency.
 
-## Architecture At a Glance
-
-Clui CC is an Electron app with three layers:
+## How It Works
 
 ```
-Renderer (React UI) -> Preload bridge -> Main process (ControlPlane/RunManager/PermissionServer)
+UI prompt → Main process spawns claude -p → NDJSON stream → live render
+                                         → tool call? → permission UI → approve/deny
 ```
 
-Flow:
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full deep-dive.
 
-1. UI sends a prompt from a tab.
-2. Main process starts `claude -p` for that tab.
-3. Stream events are normalized and rendered live.
-4. Tool permission requests are intercepted and shown in the approval UI.
-5. Session state is tracked so you can resume work.
+## Install App (Recommended)
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full technical deep-dive.
-
-## Quick Start (Recommended)
-
-Run these commands one at a time:
+The fastest way to get Clui CC running as a regular Mac app. This installs dependencies, voice support (Whisper), builds the app, copies it to `/Applications`, and launches it.
 
 **1) Clone the repo**
 
@@ -54,78 +45,72 @@ Run these commands one at a time:
 git clone https://github.com/lcoutodemos/clui-cc.git
 ```
 
-**2) Enter the project folder**
+**2) Double-click `install-app.command`**
+
+Open the `clui-cc` folder in Finder and double-click `install-app.command`.
+
+> **First launch:** macOS may block the app because it's unsigned. Go to **System Settings → Privacy & Security → Open Anyway**. You only need to do this once.
+> **Folder cleanup:** the installer removes temporary `dist/` and `release/` folders after a successful install to keep the repo tidy.
+
+<p align="center"><img src="docs/shortcut.png" width="520" alt="Press Option + Space to show or hide Clui CC" /></p>
+
+After the initial install, just open **Clui CC** from your Applications folder or Spotlight.
+
+<details>
+<summary><strong>Terminal / Developer Commands</strong></summary>
+
+Only `install-app.command` is kept at root intentionally for non-technical users. Developer scripts live in `commands/`.
+
+### Quick Start (Terminal)
+
+```bash
+git clone https://github.com/lcoutodemos/clui-cc.git
+```
 
 ```bash
 cd clui-cc
 ```
 
-**3) Set up (first time only)**
-
 ```bash
-./setup.command
+./commands/setup.command
 ```
 
-This checks your environment, prints exact fix commands if something is missing, and installs dependencies.
-
-**4) Launch the app**
-
 ```bash
-./start.command
+./commands/start.command
 ```
 
-> **Shortcut:** Press **⌥ + Space** (Option + Space) to show/hide the overlay at any time.  
-> If your macOS input source claims that combo, use **Cmd+Shift+K**.
+> Press **⌥ + Space** to show/hide the overlay. If your macOS input source claims that combo, use **Cmd+Shift+K**.
 
-To close the app, use the tray icon (Quit) or run:
-
-```bash
-./stop.command
-```
-
-You can also double-click these `.command` files from Finder.
-
-## Run as a macOS App (No Terminal After Setup)
-
-Once dependencies are installed, you can build a standalone `Clui CC.app` and use it like any other Mac app.
-
-**1) Build the app**
+To stop:
 
 ```bash
-npm run dist
+./commands/stop.command
 ```
 
-**2) Copy to Applications**
-
-Check which output was created and copy it:
+### Developer Workflow
 
 ```bash
-ls release/
+npm install
 ```
-
-Apple Silicon (M1/M2/M3/M4) — you'll see `mac-arm64/`:
 
 ```bash
-cp -R "release/mac-arm64/Clui CC.app" /Applications/
+npm run dev
 ```
 
-Intel Mac — you'll see `mac/`:
+Renderer changes update instantly. Main-process changes require restarting `npm run dev`.
 
-```bash
-cp -R "release/mac/Clui CC.app" /Applications/
-```
+### Other Commands
 
-**3) First launch — Gatekeeper warning**
+| Command | Purpose |
+|---------|---------|
+| `./commands/setup.command` | Environment check + install dependencies |
+| `./commands/start.command` | Build and launch from source |
+| `./commands/stop.command` | Stop all Clui CC processes |
+| `npm run build` | Production build (no packaging) |
+| `npm run dist` | Package as macOS `.app` into `release/` |
+| `npm run doctor` | Run environment diagnostic |
 
-Because the app is unsigned (local open-source build, not from the App Store), macOS will block it on first launch. To allow it:
-
-1. Open **System Settings → Privacy & Security**
-2. Scroll down to the security section
-3. Click **Open Anyway** next to the Clui CC message
-
-You only need to do this once.
-
-> This is a local build on your machine. It is not distributed through the App Store.
+</details>
 
 <details>
 <summary><strong>Setup Prerequisites (Detailed)</strong></summary>
@@ -168,13 +153,7 @@ npm install -g @anthropic-ai/claude-code
 claude
 ```
 
-**Step 6.** Verify Claude Code is working (should print `2.1.x` or higher):
-
-```bash
-claude --version
-```
-
-**Optional:** Install Whisper for voice input:
+**Step 6.** Install Whisper for voice input:
 
 ```bash
 brew install whisper-cli
@@ -185,55 +164,7 @@ brew install whisper-cli
 </details>
 
 <details>
-<summary><strong>Development Commands</strong></summary>
-
-### Hot Reload
-
-If you are actively developing:
-
-```bash
-npm install
-```
-
-```bash
-npm run dev
-```
-
-Renderer changes update instantly. Main-process changes require restarting `npm run dev`.
-
-### Production Build
-
-```bash
-npm run build
-```
-
-```bash
-npx electron .
-```
-
-</details>
-
-<details>
 <summary><strong>Architecture and Internals</strong></summary>
-
-Clui CC is an Electron app with three layers:
-
-```
-┌─────────────────────────────────────────────────┐
-│  Renderer (React 19 + Zustand + Tailwind CSS 4) │
-│  Components, theme, state management             │
-├─────────────────────────────────────────────────┤
-│  Preload (window.clui bridge)                    │
-│  Secure IPC surface between renderer and main    │
-├─────────────────────────────────────────────────┤
-│  Main Process                                    │
-│  ControlPlane → RunManager → claude -p (NDJSON)  │
-│  PermissionServer (HTTP hooks on 127.0.0.1)      │
-│  Marketplace catalog (GitHub raw fetch + cache)   │
-└─────────────────────────────────────────────────┘
-```
-
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full deep-dive.
 
 ### Project Structure
 

@@ -42,7 +42,7 @@ npm run build      # production build — must exit 0 with no errors
 - [ ] `claude` CLI installed and authenticated (`claude --version` returns 2.1+)
 
 ### Startup
-- [ ] `npm run dev` or `./start.command` launches the app
+- [ ] `npm run dev` or `./commands/start.command` launches the app
 - [ ] Floating pill appears at bottom-center of screen
 - [ ] `⌥ + Space` toggles visibility (fallback: `Cmd+Shift+K`)
 - [ ] Tray icon appears in menu bar
@@ -89,11 +89,10 @@ npm run build      # production build — must exit 0 with no errors
 - [ ] Install flow shows confirmation with exact CLI commands
 - [ ] Graceful error state when offline
 
-### Voice Input (requires Whisper)
+### Voice Input (Whisper required — installed by install-app.command)
 - [ ] Microphone button starts recording
 - [ ] Stop button ends recording and transcribes
 - [ ] Transcribed text appears in input bar
-- [ ] Error message if whisper not installed
 
 ### Attachments
 - [ ] Paperclip button opens file picker

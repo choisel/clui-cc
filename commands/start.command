@@ -1,12 +1,14 @@
 #!/bin/bash
 set -e
-cd "$(dirname "$0")"
+
+# Resolve to repo root (one level up from commands/)
+cd "$(dirname "$0")/.."
 
 if [ ! -d "node_modules" ]; then
   echo "Dependencies not installed."
   echo
   echo "  If this is your first time, run:"
-  echo "    ./setup.command"
+  echo "    ./commands/setup.command"
   echo
   echo "  Or install manually:"
   echo "    npm install"
@@ -30,7 +32,7 @@ if ! npx electron-vite build --mode production; then
   exit 1
 fi
 
-echo "Clui CC running. ⌥ + Space to toggle. Use ./stop.command or tray icon > Quit to close."
+echo "Clui CC running. ⌥ + Space to toggle. Use ./commands/stop.command or tray icon > Quit to close."
 
 # Launch in a new process group and record the PID
 npx electron . &
