@@ -198,12 +198,7 @@ function toggleWindow(source = 'unknown'): void {
     snapshotWindowState(`toggle#${toggleId} pre`)
   }
 
-  // Hide only when the webContents is focused — meaning the window is present and
-  // active on the current Space. isVisible() alone is not sufficient: the window can
-  // be visible on a different Space (isVisible() === true, isFocused() === false).
-  // In that case, pressing the shortcut should bring it forward, not hide it.
-  const shouldHide = mainWindow.isVisible() && mainWindow.webContents.isFocused()
-  if (shouldHide) {
+  if (mainWindow.isVisible()) {
     mainWindow.hide()
     if (SPACES_DEBUG) scheduleToggleSnapshots(toggleId, 'hide')
   } else {
