@@ -9,9 +9,9 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, rmSync, cpSync } from 'fs'
-import { join, dirname } from 'path'
+import { join } from 'path'
 import { homedir } from 'os'
-import { execSync } from 'child_process'
+import { spawnSync } from 'child_process'
 import { randomUUID } from 'crypto'
 import { SKILLS, type SkillEntry } from './manifest'
 
@@ -94,14 +94,21 @@ async function installGithubSkill(
     const pathDepth = path.split('/').length + 1 // +1 for the github top-level dir
     const tarballUrl = `https://api.github.com/repos/${repo}/tarball/${commitSha}`
 
-    // Use curl + tar — both always available on macOS
-    const cmd = [
-      `curl -sL "${tarballUrl}"`,
-      '|',
-      `tar -xz --strip-components=${pathDepth} -C "${tmpDir}" "*/${path}"`,
-    ].join(' ')
+    // Use curl piped to tar via spawn — no shell interpolation, arguments passed directly
+    // to each binary so special characters in tmpDir or path cannot escape into shell.
+    const curl = spawnSync('/usr/bin/curl', ['-sL', tarballUrl], { timeout: 60000, maxBuffer: 100 * 1024 * 1024 })
+    if (curl.status !== 0) {
+      throw new Error(`curl failed (exit ${curl.status}): ${curl.stderr?.toString().trim()}`)
+    }
 
-    execSync(cmd, { timeout: 60000, stdio: 'pipe' })
+    const tar = spawnSync(
+      '/usr/bin/tar',
+      ['-xz', `--strip-components=${pathDepth}`, '-C', tmpDir, `*/${path}`],
+      { input: curl.stdout, timeout: 30000 },
+    )
+    if (tar.status !== 0) {
+      throw new Error(`tar failed (exit ${tar.status}): ${tar.stderr?.toString().trim()}`)
+    }
 
     // Validate extracted files
     onStatus({ name: entry.name, state: 'validating' })
