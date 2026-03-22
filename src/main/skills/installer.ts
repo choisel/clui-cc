@@ -8,7 +8,7 @@
  * it was placed there by the user and we don't touch it.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, rmSync, cpSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, rmSync, cpSync, readdirSync, lstatSync, realpathSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import { spawnSync } from 'child_process'
@@ -65,6 +65,32 @@ function writeVersionFile(skillDir: string, entry: SkillEntry): void {
   writeFileSync(join(skillDir, VERSION_FILE), JSON.stringify(meta, null, 2) + '\n')
 }
 
+/**
+ * Recursively walks dir and throws if any symlink resolves to a path outside dir.
+ * Defends against malicious tarballs that include symlinks pointing to sensitive
+ * files on the host (e.g. ~/.ssh/id_rsa, /etc/passwd).
+ */
+export function assertNoSymlinkEscape(dir: string): void {
+  const base = realpathSync(dir)
+
+  const scan = (current: string): void => {
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const full = join(current, entry.name)
+      if (entry.isSymbolicLink()) {
+        // realpathSync follows the chain to the final target
+        const target = realpathSync(full)
+        if (!target.startsWith(base + '/') && target !== base) {
+          throw new Error(`Symlink escape detected: ${full} → ${target}`)
+        }
+      } else if (entry.isDirectory()) {
+        scan(full)
+      }
+    }
+  }
+
+  scan(base)
+}
+
 function validateSkill(dir: string, requiredFiles: string[]): string | null {
   for (const f of requiredFiles) {
     if (!existsSync(join(dir, f))) {
@@ -103,12 +129,18 @@ async function installGithubSkill(
 
     const tar = spawnSync(
       '/usr/bin/tar',
-      ['-xz', `--strip-components=${pathDepth}`, '-C', tmpDir, `*/${path}`],
+      // --no-symlinks: refuse to create symlinks during extraction (first line of defence)
+      ['-xz', '--no-symlinks', `--strip-components=${pathDepth}`, '-C', tmpDir, `*/${path}`],
       { input: curl.stdout, timeout: 30000 },
     )
     if (tar.status !== 0) {
       throw new Error(`tar failed (exit ${tar.status}): ${tar.stderr?.toString().trim()}`)
     }
+
+    // Second line of defence: scan the extracted tree and reject any symlink that
+    // resolves outside tmpDir (catches hardlinks-as-symlinks, old tar versions that
+    // ignore --no-symlinks, or any future extraction path we missed).
+    assertNoSymlinkEscape(tmpDir)
 
     // Validate extracted files
     onStatus({ name: entry.name, state: 'validating' })

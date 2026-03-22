@@ -78,6 +78,8 @@ describe('installGithubSkill — spawnSync argument safety', () => {
 
     expect(tarBin).toBe('/usr/bin/tar')
     expect(Array.isArray(tarArgs)).toBe(true)
+    // --no-symlinks must be present to block symlink creation at extraction time
+    expect(tarArgs).toContain('--no-symlinks')
     // -C must be a separate argument from the directory path
     const cIndex = tarArgs.indexOf('-C')
     expect(cIndex).toBeGreaterThan(-1)
